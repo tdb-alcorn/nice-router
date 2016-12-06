@@ -1,0 +1,32 @@
+{
+  "name": "nice-router",
+  "version": "1.0.0",
+  "description": "A nice, simple http router.",
+  "main": "router.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tdb-alcorn/nice-router.git"
+  },
+  "keywords": [
+    "router",
+    "http"
+  ],
+  "author": "Tom Alcorn <tdb.alcorn@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tdb-alcorn/nice-router/issues"
+  },
+  "homepage": "https://github.com/tdb-alcorn/nice-router#readme",
+  "dependencies": {
+    "nice-logger": "^1.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  }
+}
