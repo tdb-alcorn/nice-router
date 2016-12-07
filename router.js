@@ -3,7 +3,7 @@ var url = require("url");
 var querystring = require("querystring");
 
 var Logger = require("nice-logger");
-var log = new Logger("router");
+var log = new Logger("router", "error");
 
 function Router() {
     var routes = {
@@ -49,7 +49,7 @@ function Router() {
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.end(errorPage(404));
             }
-            handler(req.headers, b, h.query, res);
+            handler(req, res, b, req.headers, h.query);
         });
     }
 
@@ -62,6 +62,7 @@ function Router() {
     }
 
     function addRoute(path, method, handler) {
+        // The signature of handler should be function(request, response, body, headers, query)
         var p = pathSplit(path);
         p.push(method);
         set(routes, p, handler);
@@ -71,7 +72,7 @@ function Router() {
     function fsHandler(path) {
         // If there is an index.html at the path it returns it
         // Otherwise it returns a page listing the files in the directory at path.
-        return function(headers, body, query, response) {
+        return function(req, res, body, headers, query) {
             // contents = fs.read(index.html)
             res.end(contents);
         }
