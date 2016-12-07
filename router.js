@@ -1,9 +1,11 @@
 var http = require("http");
 var url = require("url");
 var querystring = require("querystring");
+var fs = require("fs");
+var path = require("path");
 
 var Logger = require("nice-logger");
-var log = new Logger("router", "error");
+var log = new Logger("router", "warning");
 
 function Router() {
     var routes = {
@@ -49,7 +51,15 @@ function Router() {
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.end(errorPage(404));
             }
-            handler(req, res, b, req.headers, h.query);
+            try {
+                handler(req, res, b, req.headers, h.query);
+            } catch (err) {
+                log.error(req.url, b, req.headers, h.query, err);
+                if (!res.finished) {
+                    res.writeHead(500, {"Content-Type": "text/plain"});
+                    res.end(errorPage(500, err));
+                }
+            }
         });
     }
 
@@ -69,12 +79,33 @@ function Router() {
         log.debug("Added handler for route", method, path);
     }
 
-    function fsHandler(path) {
-        // If there is an index.html at the path it returns it
+    function fsHandler(p) {
+        // If there is an index.html at the path it returns it.
         // Otherwise it returns a page listing the files in the directory at path.
         return function(req, res, body, headers, query) {
-            // contents = fs.read(index.html)
-            res.end(contents);
+            var pj = path.join(process.cwd(), p, "index.html");
+            fs.readFile(pj, function(err, data) {
+                if (err) {
+                    fs.readdir(path.join(process.cwd(), p), function(err, files) {
+                        if (err) {
+                            res.writeHead(500, {"Content-Type": "text/plain"});
+                            res.end(errorPage(500, err));
+                            return;
+                        }
+                        res.writeHead(200, {"Content-Type": "text/html"});
+                        var body = [];
+                        body.push("<h1>Index of " + p + "</h1");
+                        body.push("<ul>");
+                        for (var i=0, len=files.length; i<len; i++) {
+                            body.push("<li>" + files[i] + "</li>");
+                        }
+                        body.push("</ul");
+                        res.end(body.join("\n"));
+                    });
+                    return
+                }
+                res.end(data);
+            });
         }
     }
 
@@ -106,8 +137,13 @@ function Router() {
         }
     }
 
-    function errorPage(code) {
-        return [code.toString(), http.STATUS_CODES[code]].join(" ");
+    function errorPage(code, err) {
+        var httpLine = [code.toString(), http.STATUS_CODES[code]].join(" ");
+        var stack = "";
+        if (err) {
+            stack = [err.toString(), "", "Stack trace:", err.stack].join("\n");
+        }
+        return [httpLine, stack].join("\n");
     }
 
     this.addRoute = addRoute;

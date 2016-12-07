@@ -27,6 +27,7 @@
     "nice-logger": "^1.0.0"
   },
   "devDependencies": {
-    "mocha": "^3.2.0"
+    "mocha": "^3.2.0",
+    "nice-open": "^1.0.0"
   }
 }
