@@ -4,6 +4,10 @@ var querystring = require("querystring");
 var fs = require("fs");
 var path = require("path");
 
+var deepor = require("deepor");
+var get = deepor.get;
+var set = deepor.set;
+
 var Logger = require("nice-logger");
 var log = new Logger("router", "warning");
 
@@ -17,7 +21,7 @@ function Router() {
     var server = http.createServer(route);
 
     function listen(port) {
-        log.info("Listening on port", port);
+        log.warning("Listening on port", port);
         return new Promise(function(resolve, reject) {
             server.listen(port, resolve);
         });
@@ -26,6 +30,7 @@ function Router() {
     function close() {
         return new Promise(function(resolve, reject) {
             server.close(resolve);
+            log.warning("Shutting down.");
         });
     }
 
@@ -46,7 +51,7 @@ function Router() {
             var h = url.parse(req.url, true);
             var p = pathSplit(h.pathname);
             p.push(req.method);
-            var handler = getIfExists(routes, p);
+            var handler = get(routes, p);
             if (!handler) {
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.end(errorPage(404));
@@ -54,7 +59,7 @@ function Router() {
             try {
                 handler(req, res, b, req.headers, h.query);
             } catch (err) {
-                log.error(req.url, b, req.headers, h.query, err);
+                log.error(req.method, req.url, b, req.headers, h.query, handler, err);
                 if (!res.finished) {
                     res.writeHead(500, {"Content-Type": "text/plain"});
                     res.end(errorPage(500, err));
@@ -109,34 +114,6 @@ function Router() {
         }
     }
 
-    function getIfExists(obj, pathArray) {
-        if (pathArray && pathArray.constructor === Array) {
-            for (var i=0, len=pathArray.length, keys=Object.keys(obj); i<len; i++) {
-                if (keys.indexOf(pathArray[i]) === -1) {
-                    break;
-                }
-                obj = obj[pathArray[i]];
-                keys = Object.keys(obj);
-            }
-
-            return obj;
-        }
-        return undefined;
-    }
-
-    function set(obj, pathArray, value) {
-        if (pathArray && pathArray.constructor === Array) {
-            for (var i=0, len=pathArray.length, keys=Object.keys(obj); i<(len-1); i++) {
-                if (keys.indexOf(pathArray[i] === -1)) {
-                    obj[pathArray[i]] = new Object();
-                }
-                obj = obj[pathArray[i]];
-                keys=Object.keys(obj);
-            }
-            obj[pathArray[len-1]] = value;
-        }
-    }
-
     function errorPage(code, err) {
         var httpLine = [code.toString(), http.STATUS_CODES[code]].join(" ");
         var stack = "";
@@ -146,9 +123,28 @@ function Router() {
         return [httpLine, stack].join("\n");
     }
 
+    function addStatic(p, contentType) {
+        contentType = contentType || "text/plain";
+        var handler = function(req, res) {
+            var pj = path.join(process.cwd(), p);
+            fs.readFile(pj, function(err, data) {
+                if (err) {
+                    res.writeHead(404);
+                    res.end(errorpage(404), p);
+                    return;
+                }
+                res.writeHead(200, {"Content-Type": contentType});
+                res.end(data);
+            });
+        }
+        addRoute(p, "GET", handler);
+    }
+
     this.addRoute = addRoute;
     this.listen = listen;
     this.close = close;
+    this.errorPage = errorPage;
+    this.addStatic = addStatic;
     this.setLogLevel = log.setLevel;
 }
 

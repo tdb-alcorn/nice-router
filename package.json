@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/tdb-alcorn/nice-router#readme",
   "dependencies": {
+    "deepor": "^1.0.0",
     "nice-logger": "^1.0.0"
   },
   "devDependencies": {

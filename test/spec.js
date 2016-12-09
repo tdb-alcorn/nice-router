@@ -74,23 +74,5 @@ describe("Router", function() {
             });
         });
     });
-
-    // describe("#set", function() {
-    //     it("should set values", function() {
-    //         var obj = {};
-    //         router.set(obj, ["a", "b", "c"], 1);
-    //         assert.equal(obj["a"]["b"]["c"], 1);
-    //     });
-    //     it("should set functions", function() {
-    //         var obj = {};
-    //         router.set(obj, ["a", "b", "c"], function() { return 1; });
-    //         assert.equal(obj["a"]["b"]["c"](), 1);
-    //     });
-    //     it("should overwrite stuff", function() {
-    //         var obj = {a: {b: {c: function() { return 0; }}}};
-    //         router.set(obj, ["a", "b", "c"], function() { return 1; });
-    //         assert.equal(obj["a"]["b"]["c"](), 1);
-    //     });
-    // });
 });
 
