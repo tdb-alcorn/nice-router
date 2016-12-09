@@ -53,13 +53,15 @@ function Router() {
             p.push(req.method);
             var handler = get(routes, p);
             if (!handler) {
+                log.warning(404, req.method, req.url);
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.end(errorPage(404));
+                return;
             }
             try {
                 handler(req, res, b, req.headers, h.query);
             } catch (err) {
-                log.error(req.method, req.url, b, req.headers, h.query, handler, err);
+                log.error(req.method, req.url, b.toString(), req.headers, h.query, handler, err);
                 if (!res.finished) {
                     res.writeHead(500, {"Content-Type": "text/plain"});
                     res.end(errorPage(500, err));
@@ -82,6 +84,10 @@ function Router() {
         p.push(method);
         set(routes, p, handler);
         log.debug("Added handler for route", method, path);
+    }
+
+    function addStatic(p, contentType) {
+        addRoute(p, "GET", staticFile(p, contentType));
     }
 
     function staticFile(p, contentType) {
@@ -143,7 +149,8 @@ function Router() {
     this.listen = listen;
     this.close = close;
     this.errorPage = errorPage;
-    this.staticFile = addStatic;
+    this.staticFile = staticFile;
+    this.addStatic = addStatic;
     this.setLogLevel = log.setLevel;
 }
 

@@ -21,7 +21,7 @@ describe("Router", function() {
         return new Promise(function(resolve, reject) {
             var router = new Router();
             router.addRoute("/", "GET", function() {
-                throw new Error("Oh noes!");
+                throw new Error("This is a test error.");
             });
             var port = 8081;
             var url = "http://localhost:" + port;
