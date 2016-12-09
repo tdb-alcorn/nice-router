@@ -84,6 +84,22 @@ function Router() {
         log.debug("Added handler for route", method, path);
     }
 
+    function staticFile(p, contentType) {
+        contentType = contentType || "text/plain";
+        return function(req, res) {
+            var pj = path.join(process.cwd(), p);
+            fs.readFile(pj, function(err, data) {
+                if (err) {
+                    res.writeHead(404);
+                    res.end(errorpage(404), p);
+                    return;
+                }
+                res.writeHead(200, {"Content-Type": contentType});
+                res.end(data);
+            });
+        }
+    }
+
     function fsHandler(p) {
         // If there is an index.html at the path it returns it.
         // Otherwise it returns a page listing the files in the directory at path.
@@ -123,28 +139,11 @@ function Router() {
         return [httpLine, stack].join("\n");
     }
 
-    function addStatic(p, contentType) {
-        contentType = contentType || "text/plain";
-        var handler = function(req, res) {
-            var pj = path.join(process.cwd(), p);
-            fs.readFile(pj, function(err, data) {
-                if (err) {
-                    res.writeHead(404);
-                    res.end(errorpage(404), p);
-                    return;
-                }
-                res.writeHead(200, {"Content-Type": contentType});
-                res.end(data);
-            });
-        }
-        addRoute(p, "GET", handler);
-    }
-
     this.addRoute = addRoute;
     this.listen = listen;
     this.close = close;
     this.errorPage = errorPage;
-    this.addStatic = addStatic;
+    this.staticFile = addStatic;
     this.setLogLevel = log.setLevel;
 }
 
