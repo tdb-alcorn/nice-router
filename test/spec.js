@@ -43,7 +43,7 @@ describe("Router", function() {
         it("should pass the request to the appropriate handler", function() {
             var received = new Object();
             var handlerCalled = false;
-            router.addRoute("/", "GET", function(req, response, body, headers, query) {
+            router.addRoute("/", "GET", function(req, response, headers, query, body) {
                 received.headers = headers;
                 received.body = body;
                 received.query = query;
@@ -58,7 +58,7 @@ describe("Router", function() {
         it("should receive request body", function() {
             var received = new Object();
             var handlerCalled = false;
-            router.addRoute("/", "POST", function(req, response, body, headers, query) {
+            router.addRoute("/", "POST", function(req, response, headers, query, body) {
                 received.headers = headers;
                 received.body = body;
                 received.query = query;

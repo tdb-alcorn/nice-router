@@ -59,9 +59,9 @@ function Router() {
                 return;
             }
             try {
-                handler(req, res, b, req.headers, h.query);
+                handler(req, res, req.headers, h.query, b);
             } catch (err) {
-                log.error(req.method, req.url, b.toString(), req.headers, h.query, handler, err);
+                log.error(req.method, req.url, req.headers, h.query, b.toString(), handler, err);
                 if (!res.finished) {
                     res.writeHead(500, {"Content-Type": "text/plain"});
                     res.end(errorPage(500, err));
@@ -79,7 +79,7 @@ function Router() {
     }
 
     function addRoute(path, method, handler) {
-        // The signature of handler should be function(request, response, body, headers, query)
+        // The signature of handler should be function(request, response, headers, query, body)
         var p = pathSplit(path);
         p.push(method);
         set(routes, p, handler);
@@ -109,7 +109,7 @@ function Router() {
     function fsHandler(p) {
         // If there is an index.html at the path it returns it.
         // Otherwise it returns a page listing the files in the directory at path.
-        return function(req, res, body, headers, query) {
+        return function(req, res, headers, query, body) {
             var pj = path.join(process.cwd(), p, "index.html");
             fs.readFile(pj, function(err, data) {
                 if (err) {
