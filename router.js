@@ -1,4 +1,5 @@
 var http = require("http");
+var https = require("https");
 var url = require("url");
 var querystring = require("querystring");
 var fs = require("fs");
@@ -32,6 +33,19 @@ function Router() {
             server.close(resolve);
             log.warning("Shutting down.");
         });
+    }
+
+    function useHTTPS(options, listenCallback) {
+        if (server.listening) {
+            // if server is already running, restart it.
+            var port = server.address().port;
+            server.close(function() {
+                server = https.createServer(options, route);
+                server.listen(port, cb);
+            });
+            return;
+        }
+        server = https.createServer(options, route);
     }
 
     function route(req, res) {
@@ -152,6 +166,7 @@ function Router() {
     this.staticFile = staticFile;
     this.addStatic = addStatic;
     this.setLogLevel = log.setLevel;
+    this.useHTTPS = useHTTPS;
 }
 
 module.exports = Router;
