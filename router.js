@@ -15,7 +15,7 @@ var log = new Logger("router", "warning");
 function Router() {
     var routes = {
         "": {
-            "GET": fsHandler("/"),
+            "GET": staticFile("/index.html", "text/html"),
         },
     };
 
@@ -160,7 +160,7 @@ function Router() {
             fs.readFile(pj, function(err, data) {
                 if (err) {
                     res.writeHead(404);
-                    res.end(errorpage(404), p);
+                    res.end(errorPage(404), p);
                     return;
                 }
                 res.writeHead(200, headers);
@@ -169,54 +169,34 @@ function Router() {
         }
     }
 
-    function addStaticDir(p) {
-        fs.readdir(path.join(process.cwd(), p), function(err, files) {
-            if (err) {
-                log.error(err);
-                throw err;
-            }
-            for (var i=0, len=files.length; i<len; i++) {
-                fs.stat(files[i], function(err, stats) {
-                    if (stats.isDirectory()) {
-                        addStaticDir(files[i]);
-                    } else if (stats.isFile()) {
-                        addStatic(files[i]);
-                    } else {
-                        log.warning("Skipping", files[i]);
-                    }
-                });
-            }
-        });
-    }
-
-    function fsHandler(p) {
-        // If there is an index.html at the path it returns it.
-        // Otherwise it returns a page listing the files in the directory at path.
-        return function(req, res, headers, query, body) {
-            var pj = path.join(process.cwd(), p, "index.html");
-            fs.readFile(pj, function(err, data) {
+    function addStaticDir(p, generateIndex) {
+            fs.readdir(path.join(process.cwd(), p), function(err, files) {
                 if (err) {
-                    fs.readdir(path.join(process.cwd(), p), function(err, files) {
-                        if (err) {
-                            res.writeHead(500, {"Content-Type": "text/plain"});
-                            res.end(errorPage(500, err));
-                            return;
-                        }
-                        res.writeHead(200, {"Content-Type": "text/html"});
-                        var body = [];
-                        body.push("<h1>Index of " + p + "</h1");
-                        body.push("<ul>");
-                        for (var i=0, len=files.length; i<len; i++) {
-                            body.push("<li>" + files[i] + "</li>");
-                        }
-                        body.push("</ul");
-                        res.end(body.join("\n"));
-                    });
-                    return
+                    log.error(err);
+                    throw err;
                 }
-                res.end(data);
+                for (var i=0, len=files.length; i<len; i++) {
+                    if (generateIndex) {
+                        addRoute(p, "GET", function(req, res) {
+                            res.writeHead(200, {"Content-Type": "text/html"});
+                            res.end(dirPage(p, files));
+                        });
+                    }
+                    var _ = function(file) {
+                        fs.stat(path.join(process.cwd(), file), function(err, stats) {
+                            if (err) {
+                                log.error(err);
+                            } else if (stats.isDirectory()) {
+                                addStaticDir(file, generateIndex);
+                            } else if (stats.isFile()) {
+                                addStatic(file);
+                            } else {
+                                log.warning("Skipping", file);
+                            }
+                        });
+                    }(path.join(p, files[i]));
+                }
             });
-        }
     }
 
     function errorPage(code, err) {
@@ -228,10 +208,22 @@ function Router() {
         return [httpLine, stack].join("\n");
     }
 
+    function dirPage(dir, files) {
+        var body = [];
+        body.push("<h1>Index of " + dir + "</h1");
+        body.push("<ul>");
+        for (var i=0, len=files.length; i<len; i++) {
+            body.push("<li>" + files[i].link(path.join(dir, files[i])) + "</li>");
+        }
+        body.push("</ul");
+        return body.join("\n");
+    }
+
     this.addRoute = addRoute;
     this.listen = listen;
     this.close = close;
     this.errorPage = errorPage;
+    this.dirPage = dirPage;
     this.staticFile = staticFile;
     this.addStatic = addStatic;
     this.addStaticDir = addStaticDir;
