@@ -21,6 +21,27 @@ function Router() {
 
     var server = http.createServer(route);
 
+    var contentTypes = {
+        // text
+        "html": "text/html",
+        "css": "text/css",
+        "js": "text/javascript",
+        // image
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        // application
+        "rtf": "application/rtf",
+        "pdf": "application/pdf",
+        "zip": "application/zip",
+        "gz": "application/gzip",
+    };
+
+    var contentEncodings = {
+        "gz": "gzip",
+    };
+
     function listen(port) {
         log.warning("Listening on port", port);
         return new Promise(function(resolve, reject) {
@@ -101,11 +122,39 @@ function Router() {
     }
 
     function addStatic(p, contentType) {
-        addRoute(p, "GET", staticFile(p, contentType));
+        var handler = contentType ? staticFile(p, contentType) : staticFile(p);
+        addRoute(p, "GET", handler);
+    }
+
+    function fileExtensionOf(filename, validExtensions) {
+        var components = filename.split(".");
+        for (var ext=components.pop(); ext;) {
+            if (validExtensions.indexOf(ext) !== -1) {
+                return ext;
+            }
+            return undefined;
+        }
     }
 
     function staticFile(p, contentType) {
-        contentType = contentType || "text/plain";
+        var headers = new Object();
+        if (contentType) {
+            headers["Content-Type"] = contentType;
+        } else {
+            var ext;
+            var encExt = fileExtensionOf(p, Object.keys(contentEncodings));
+            if (encExt) {
+                var innerP = p.substr(0, p.length - encExt.length);
+                ext = fileExtensionOf(innerP, Object.keys(contentTypes));
+                if (ext) {
+                    headers["Content-Encoding"] = contentEncodings[encExt];
+                    headers["Content-Type"] = contentTypes[ext];
+                }
+            } else {
+                ext = fileExtensionOf(p, Object.keys(contentTypes));
+                headers["Content-Type"] = ext ? contentTypes[ext] : "text/plain";
+            }
+        }
         return function(req, res) {
             var pj = path.join(process.cwd(), p);
             fs.readFile(pj, function(err, data) {
@@ -114,10 +163,30 @@ function Router() {
                     res.end(errorpage(404), p);
                     return;
                 }
-                res.writeHead(200, {"Content-Type": contentType});
+                res.writeHead(200, headers);
                 res.end(data);
             });
         }
+    }
+
+    function addStaticDir(p) {
+        fs.readdir(path.join(process.cwd(), p), function(err, files) {
+            if (err) {
+                log.error(err);
+                throw err;
+            }
+            for (var i=0, len=files.length; i<len; i++) {
+                fs.stat(files[i], function(err, stats) {
+                    if (stats.isDirectory()) {
+                        addStaticDir(files[i]);
+                    } else if (stats.isFile()) {
+                        addStatic(files[i]);
+                    } else {
+                        log.warning("Skipping", files[i]);
+                    }
+                });
+            }
+        });
     }
 
     function fsHandler(p) {
@@ -165,6 +234,7 @@ function Router() {
     this.errorPage = errorPage;
     this.staticFile = staticFile;
     this.addStatic = addStatic;
+    this.addStaticDir = addStaticDir;
     this.setLogLevel = log.setLevel;
     this.useHTTPS = useHTTPS;
 }
