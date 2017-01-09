@@ -62,7 +62,7 @@ function Router() {
             var port = server.address().port;
             server.close(function() {
                 server = https.createServer(options, route);
-                server.listen(port, cb);
+                server.listen(port, listenCallback);
             });
             return;
         }
@@ -219,6 +219,22 @@ function Router() {
         return body.join("\n");
     }
 
+    function parseCookies(cookieString) {
+        var cookies = new Object();
+        var pairs = cookieString.split(";");
+        var s, k, v;
+        for (var i=0, len=pairs.length; i<len; i++) {
+            s = pairs[i].trim().split("=");
+            if (s.length < 2) {
+                continue;
+            }
+            k = decodeURIComponent(s[0]);
+            v = decodeURIComponent(s[1]);
+            cookies[k] = v;
+        }
+        return cookies;
+    }
+
     this.addRoute = addRoute;
     this.listen = listen;
     this.close = close;
@@ -229,6 +245,7 @@ function Router() {
     this.addStaticDir = addStaticDir;
     this.setLogLevel = log.setLevel;
     this.useHTTPS = useHTTPS;
+    this.parseCookies = parseCookies;
 }
 
 module.exports = Router;

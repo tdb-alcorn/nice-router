@@ -109,23 +109,39 @@ describe("Router", function() {
         });
     });
     describe("#useHTTPS", function() {
-        it("should restart server if already running", function(done) {
-            router.useHTTPS(httpsOptions, function() {
-                httpsRequest("/", "GET", {}).then(function(res) {
-                    assert.equal(res.statusCode, 200);
-                    done();
+        it("should restart server if already running", function() {
+            return new Promise(function(resolve, reject) {
+                router.useHTTPS(httpsOptions, function() {
+                    httpsRequest("/", "GET", {}).then(function(res) {
+                        assert.equal(res.statusCode, 200);
+                        console.log(res);
+                        resolve();
+                    });
                 });
             });
         });
         it("should serve", function() {
             return router.close().then(function() {
                 router = new Router();
+                router.setLogLevel("debug");
                 router.useHTTPS(httpsOptions);
-                router.listen(testPort);
+                return router.listen(testPort);
+            })
+            .then(function() {
                 return httpsRequest("/", "GET", {}).then(function(res) {
                     assert.equal(res.statusCode, 200);
                 });
             });
+        });
+    });
+    describe("#parseCookies", function() {
+        it("should turn a cookie string into an object", function() {
+            var cookieString = "foo=bar; foo2=baz;";
+            var obj = {
+                foo: "bar",
+                foo2: "baz",
+            };
+            assert.deepEqual(router.parseCookies(cookieString), obj);
         });
     });
 });
