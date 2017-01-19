@@ -69,13 +69,18 @@ function Router() {
         server = https.createServer(options, route);
     }
 
+    function requestSummary(req) {
+        var clientIp = req.headers["x-real-ip"] || req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+        return [clientIp, req.method, req.url, JSON.stringify(req.headers)].join(" ");
+    }
+
     function route(req, res) {
-        log.info("Incoming request", req.method, req.url);
+        log.debug("Incoming", requestSummary(req));
         req.on("aborted", function() {
-            log.warning("Client aborted", req.method, req.url);
+            log.warning("Client aborted", requestSummary(req));
         });
         req.on("close", function() {
-            log.info("Connection closed.");
+            log.debug("Connection closed", requestSummary(req));
         });
         var chunks = [];
         req.on("data", function(chunk) {
@@ -88,7 +93,7 @@ function Router() {
             p.push(req.method);
             var handler = get(routes, p);
             if (!handler) {
-                log.warning(404, req.method, req.url);
+                log.warning(404, requestSummary(req));
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.end(errorPage(404));
                 return;
@@ -96,7 +101,7 @@ function Router() {
             try {
                 handler(req, res, req.headers, h.query, b);
             } catch (err) {
-                log.error(req.method, req.url, req.headers, h.query, b.toString(), handler, err);
+                log.error(requestSummary(req), h.query, b.toString(), handler, err);
                 if (!res.finished) {
                     res.writeHead(500, {"Content-Type": "text/plain"});
                     res.end(errorPage(500, err));
@@ -118,7 +123,7 @@ function Router() {
         var p = pathSplit(path);
         p.push(method);
         set(routes, p, handler);
-        log.debug("Added handler for route", method, path);
+        log.info("Added handler for route", method, path);
     }
 
     function addStatic(p, contentType) {
